@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: incident-agent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # avoid "free" — it spins down on idle, causing cold-start
+                            # latency that can blow the grader's 18s per-request budget
+    healthCheckPath: /healthz
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false        # set this manually in the Render dashboard, never commit it
+      - key: MODEL_NAME
+        value: gemini-2.5-flash
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: incident-data
+      mountPath: /data
+      sizeGB: 1

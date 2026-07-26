@@ -8,6 +8,9 @@ import { planIncident } from "./model.js";
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
+// Render (and any platform) health check — not part of the grader's protocol.
+app.get("/healthz", (req, res) => res.status(200).send("ok"));
+
 const MAX_BODY_JSON_BYTES = 768 * 1024;
 
 function sendJson(res, status, obj) {

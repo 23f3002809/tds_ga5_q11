@@ -62,14 +62,47 @@ approval-gated `rollback_deployment` flow — all passing.
 
 ## Deploying
 
-Any host that gives you a public HTTPS URL with no required auth/query/fragment works, e.g.:
-- **Railway / Render / Fly.io**: point them at this repo, set `ANTHROPIC_API_KEY`, deploy.
-  These give a container with a persistent disk (or add one) — mount it and set `DATA_DIR`
-  to that mount so state survives restarts.
-- Make sure the deployed URL:
-  - Is plain `https://...` with no query string or fragment.
-  - Doesn't redirect (no trailing-slash redirect middleware, no `www.` bounce).
-  - Doesn't require an API key/auth header from the grader.
+Any host that gives you a public HTTPS URL with no required auth/query/fragment works. Below
+is a ready-to-use Docker setup targeted at Render.
+
+### Docker
+
+```bash
+docker build -t incident-agent .
+docker run -p 3000:3000 \
+  -e GEMINI_API_KEY=AIza... \
+  -e DATA_DIR=/data \
+  -v incident-data:/data \
+  incident-agent
+```
+
+The image is `node:22-alpine`, installs only production deps, and runs `node src/server.js`.
+`DATA_DIR` defaults to `/data` inside the container — mount a volume there or state resets
+every time the container restarts.
+
+### Render
+
+Two ways to deploy:
+
+**1. Blueprint (`render.yaml`, included).** Push this repo to GitHub, then in Render:
+New → Blueprint → point at the repo. It provisions a Docker web service with a 1 GB persistent
+disk mounted at `/data`, wires up `/healthz` as the health check, and reads `GEMINI_API_KEY`
+from an environment variable you set manually in the dashboard (never commit it).
+
+**2. Manual.** New → Web Service → your repo → Runtime: `Docker`. Then in the service settings:
+- **Environment variables:** `GEMINI_API_KEY` (required), optionally `MODEL_NAME`.
+- **Disk:** add one, mount path `/data`, and set `DATA_DIR=/data` — otherwise state doesn't
+  survive restarts/redeploys.
+- **Health check path:** `/healthz`.
+- **Plan:** avoid the free tier for the actual grading run — it spins down after ~15 minutes
+  idle, and the cold start on the next request can blow the grader's 18-second-per-request
+  budget. A paid "Starter" instance stays warm.
+
+Either way, double-check the URL Render gives you:
+- Is plain `https://your-service.onrender.com` with no query string or fragment.
+- Doesn't redirect.
+- Doesn't require an API key/auth header from the grader (Render's default services don't
+  add auth, but confirm nothing else in front of it does).
 
 ## Known simplifications / things to double check against your actual grader responses
 
