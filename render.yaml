@@ -4,7 +4,8 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: starter          # avoid "free" — it spins down on idle, causing cold-start
-                            # latency that can blow the grader's 18s per-request budget
+                            # latency that can blow the grader's 18s per-request budget,
+                            # and Render disks aren't available on the free plan at all
     healthCheckPath: /healthz
     envVars:
       - key: GEMINI_API_KEY
@@ -17,3 +18,11 @@ services:
       name: incident-data
       mountPath: /data
       sizeGB: 1
+
+# --- Free-tier alternative ---
+# Render's free instances don't support disks at all. If you want to stay on free,
+# delete the `disk:` block above and drop `DATA_DIR` (or point it at a plain
+# in-container path like `/app/data`, which still works — it just won't survive a
+# restart). This is workable ONLY because each grading run uses a fresh runId and
+# completes within one active session; it does NOT protect you against a mid-run
+# cold start on the very first request after idle time. Use at your own risk.
